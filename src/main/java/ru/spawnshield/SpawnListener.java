@@ -645,8 +645,14 @@ public final class SpawnListener implements Listener {
         plugin.cancelTeleport(event.getPlayer(), null);
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onRespawn(PlayerRespawnEvent event) {
+        if (event.getRespawnReason() == PlayerRespawnEvent.RespawnReason.DEATH
+                && !event.isBedSpawn()
+                && !event.isAnchorSpawn()
+                && plugin.hasSpawn()) {
+            event.setRespawnLocation(plugin.spawn().clone());
+        }
         if (!plugin.deathTitles()) {
             return;
         }
