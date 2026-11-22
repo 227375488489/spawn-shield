@@ -50,7 +50,7 @@ public final class SpawnShieldPlugin extends JavaPlugin {
     private volatile boolean voidEnabled;
     private volatile int voidOffset;
     private volatile int voidWarmup;
-    private volatile boolean allowChests;
+    private volatile boolean allowContainers;
     private volatile boolean disableWeather;
     private volatile boolean blockHunger;
     private volatile boolean blockMobSpawns;
@@ -74,8 +74,31 @@ public final class SpawnShieldPlugin extends JavaPlugin {
         }
 
         applyWorldSettings();
+        getServer().getScheduler().runTaskLater(this, this::refreshWorldState, 40L);
         getLogger().info("SpawnShield enabled, protecting " + protectedWorlds.size()
                 + " world(s), spawn at " + describe(spawn));
+    }
+
+    /**
+     * MultiWorld loads its worlds after SpawnShield on a cold start, so resolve the
+     * protected worlds and spawn again as soon as a world becomes available.
+     */
+    public void handleWorldLoad(World world) {
+        if (world == null) {
+            return;
+        }
+        refreshWorldState();
+    }
+
+    private void refreshWorldState() {
+        Location previousSpawn = this.spawn;
+        resolveProtectedWorlds();
+        loadSpawn();
+        applyWorldSettings();
+        if (previousSpawn == null && spawn != null) {
+            getLogger().info("Spawn world ready: protecting " + protectedWorlds.size()
+                    + " world(s), spawn at " + describe(spawn));
+        }
     }
 
     @Override
@@ -125,7 +148,8 @@ public final class SpawnShieldPlugin extends JavaPlugin {
         this.voidEnabled = getConfig().getBoolean("void.enabled", true);
         this.voidOffset = clamp(getConfig().getInt("void.offset", 8), 1, 256);
         this.voidWarmup = clamp(getConfig().getInt("void.warmup-seconds", 0), 0, 10);
-        this.allowChests = getConfig().getBoolean("protection.allow-chests", true);
+        this.allowContainers = getConfig().getBoolean("protection.allow-containers",
+                getConfig().getBoolean("protection.allow-chests", true));
         this.disableWeather = getConfig().getBoolean("protection.disable-weather", true);
         this.blockHunger = getConfig().getBoolean("protection.block-hunger", true);
         this.blockMobSpawns = getConfig().getBoolean("protection.block-mob-spawns", true);
@@ -209,7 +233,13 @@ public final class SpawnShieldPlugin extends JavaPlugin {
         Location loaded = null;
         if (spawnFile != null && spawnFile.isFile()) {
             YamlConfiguration data = YamlConfiguration.loadConfiguration(spawnFile);
-            World world = findWorld(data.getString("world", ""));
+            String worldName = data.getString("world", "");
+            World world = findWorld(worldName);
+            if (world == null && !worldName.isBlank()) {
+                this.spawn = null;
+                getLogger().info("Waiting for spawn world '" + worldName + "' to load...");
+                return;
+            }
             if (world != null) {
                 loaded = new Location(
                         world,
@@ -359,8 +389,8 @@ public final class SpawnShieldPlugin extends JavaPlugin {
         return voidOffset;
     }
 
-    public boolean allowChests() {
-        return allowChests;
+    public boolean allowContainers() {
+        return allowContainers;
     }
 
     public boolean blockHunger() {

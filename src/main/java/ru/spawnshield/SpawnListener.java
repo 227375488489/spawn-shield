@@ -12,9 +12,13 @@ import net.kyori.adventure.title.Title;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.Tag;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.Container;
+import org.bukkit.block.EnderChest;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.FishHook;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.Event;
@@ -54,6 +58,7 @@ import org.bukkit.event.entity.EntityPlaceEvent;
 import org.bukkit.event.entity.ExplosionPrimeEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.PlayerLeashEntityEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.hanging.HangingBreakEvent;
@@ -79,6 +84,8 @@ import org.bukkit.event.player.PlayerUnleashEntityEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
 import org.bukkit.event.world.PortalCreateEvent;
 import org.bukkit.event.world.StructureGrowEvent;
+import org.bukkit.event.world.WorldLoadEvent;
+import org.bukkit.inventory.ItemStack;
 
 public final class SpawnListener implements Listener {
 
@@ -139,9 +146,12 @@ public final class SpawnListener implements Listener {
         }
         if (block != null
                 && event.getAction() == Action.RIGHT_CLICK_BLOCK
-                && plugin.allowChests()
+                && plugin.allowContainers()
                 && plugin.inSpawn(block.getLocation())
-                && isAllowedChest(block)) {
+                && isAllowedContainer(block)) {
+            return;
+        }
+        if (isAllowedItemUse(event)) {
             return;
         }
         event.setCancelled(true);
@@ -149,9 +159,30 @@ public final class SpawnListener implements Listener {
         event.setUseItemInHand(Event.Result.DENY);
     }
 
-    private static boolean isAllowedChest(Block block) {
-        Material type = block.getType();
-        return type == Material.CHEST || type == Material.TRAPPED_CHEST;
+    private static boolean isAllowedContainer(Block block) {
+        BlockState state = block.getState();
+        return state instanceof Container || state instanceof EnderChest;
+    }
+
+    private static boolean isAllowedItemUse(PlayerInteractEvent event) {
+        if (event.getAction() != Action.RIGHT_CLICK_AIR
+                && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
+            return false;
+        }
+        Block block = event.getClickedBlock();
+        if (block != null && block.getType().isInteractable()) {
+            return false;
+        }
+        ItemStack item = event.getItem();
+        if (item == null) {
+            return false;
+        }
+        Material type = item.getType();
+        return type == Material.FISHING_ROD
+                || type.isEdible()
+                || type == Material.POTION
+                || type == Material.HONEY_BOTTLE
+                || type == Material.MILK_BUCKET;
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
@@ -263,7 +294,9 @@ public final class SpawnListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onFish(PlayerFishEvent event) {
-        if (plugin.inSpawn(event.getPlayer().getLocation()) && !canModify(event.getPlayer())) {
+        if (event.getState() == PlayerFishEvent.State.CAUGHT_ENTITY
+                && plugin.inSpawn(event.getPlayer().getLocation())
+                && !canModify(event.getPlayer())) {
             event.setCancelled(true);
         }
     }
@@ -305,9 +338,35 @@ public final class SpawnListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onProjectileLaunch(ProjectileLaunchEvent event) {
+        if (event.getEntity() instanceof FishHook) {
+            return;
+        }
         if (event.getEntity().getShooter() instanceof Player player
                 && plugin.inSpawn(player.getLocation())
                 && !canModify(player)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onFishingHookHit(ProjectileHitEvent event) {
+        if (!(event.getEntity() instanceof FishHook) || event.getHitBlock() == null) {
+            return;
+        }
+        Block block = event.getHitBlock();
+        if (!plugin.inSpawn(block.getLocation())) {
+            return;
+        }
+        Material type = block.getType();
+        if (Tag.PRESSURE_PLATES.isTagged(type)
+                || Tag.BUTTONS.isTagged(type)
+                || type == Material.LEVER
+                || type == Material.TRIPWIRE
+                || type == Material.TRIPWIRE_HOOK
+                || type == Material.TARGET
+                || type == Material.SCULK_SENSOR
+                || type == Material.CALIBRATED_SCULK_SENSOR
+                || type == Material.SCULK_SHRIEKER) {
             event.setCancelled(true);
         }
     }
@@ -561,6 +620,11 @@ public final class SpawnListener implements Listener {
         if (event.toWeatherState() && !plugin.editMode() && plugin.isProtectedWorld(event.getWorld())) {
             event.setCancelled(true);
         }
+    }
+
+    @EventHandler
+    public void onWorldLoad(WorldLoadEvent event) {
+        plugin.handleWorldLoad(event.getWorld());
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
