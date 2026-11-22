@@ -1,8 +1,8 @@
-# SpawnShield 2.0.2 — самостоятельная защита мира спавна и телепорт /spawn.
+# SpawnShield 2.1.0 — самостоятельная защита мира спавна и телепорт /spawn.
 # Плагин не зависит от AuraCore/Aura*: свой namespace, свои permissions, только Paper API.
 
 # Префикс обычных сообщений в чате.
-prefix: '<gradient:#7DE3F4:#B388FF>SpawnShield</gradient> <dark_gray>»</dark_gray> '
+prefix: '<gradient:#7DE3F4:#B388FF><bold>SpawnShield</bold></gradient> <dark_gray>›</dark_gray> '
 
 # Миры, которые защищены целиком. Для текущего сервера это void-мир 'spawn'
 # (раньше здесь ошибочно стояло 'worlds:spawn', из-за чего защита не работала).
@@ -25,23 +25,23 @@ teleport:
   # Показывать отчёт об отсчёте в action bar.
   countdown-actionbar: true
 
-  # Заголовок во время отсчёта.
-  title: '<gradient:#7DE3F4:#B388FF>НЕ ДВИГАЙТЕСЬ</gradient>'
-  subtitle: '<gray>Идёт телепортация</gray> <dark_gray>·</dark_gray> <white>%time%</white><gray>с</gray>'
-  countdown: '<#7DE3F4>⏳ Телепорт через <white>%time%</white><#7DE3F4>с</#7DE3F4> <dark_gray>·</dark_gray> <gray>не двигайтесь</gray>'
+  # Заголовок во время отсчёта (без секунд — они только в action bar).
+  title: '<gradient:#7DE3F4:#B388FF><bold>НЕ ДВИГАЙТЕСЬ</bold></gradient>'
+  subtitle: '<gray>Идёт телепортация</gray> <dark_gray>•</dark_gray> <#B388FF>приготовьтесь</#B388FF>'
+  countdown: '<#7DE3F4>Телепорт</#7DE3F4> <dark_gray>•</dark_gray> <gray>через</gray> <white>%time%</white><gray>с</gray>'
 
   # Короткая вспышка в момент переноса.
   moving-title: '<dark_gray>✦</dark_gray>'
-  moving-subtitle: '<gray>Перемещение…</gray>'
+  moving-subtitle: '<gray>Перемещаем вас на спавн…</gray>'
 
   # Прибытие на спавн.
   success-title: '<gradient:#7DE3F4:#B388FF>✦ СПАВН ✦</gradient>'
   success-subtitle: '<gray>Добро пожаловать домой</gray>'
-  success-actionbar: '<#7DE3F4>Вы на спавне</#7DE3F4> <dark_gray>·</dark_gray> <gray>мир под защитой</gray>'
+  success-actionbar: '<#7DE3F4>Вы на спавне</#7DE3F4>'
 
   # Отмена.
-  moved: '<#FF6B6B>Телепорт отменён</#FF6B6B> <gray>— вы сдвинулись</gray>'
-  damaged: '<#FF6B6B>Телепорт отменён</#FF6B6B> <gray>— вы получили урон</gray>'
+  moved: '<#FF6B6B>× Телепорт отменён</#FF6B6B> <dark_gray>•</dark_gray> <gray>вы сдвинулись с места</gray>'
+  damaged: '<#FF6B6B>× Телепорт отменён</#FF6B6B> <dark_gray>•</dark_gray> <gray>вы получили урон</gray>'
 
 # Падение в бездну (ниже минимальной высоты мира) возвращает на спавн.
 void:
@@ -50,12 +50,16 @@ void:
   offset: 8
   # 0 = мгновенно. Можно поставить 1, если нужна задержка.
   warmup-seconds: 0
-  title: '<gradient:#FF6B6B:#FFB86B>БЕЗДНА</gradient>'
-  subtitle: '<gray>Возвращаем на спавн…</gray>'
+  title: '<gradient:#FF6B6B:#FFB86B><bold>БЕЗДНА</bold></gradient>'
+  subtitle: '<gray>Возвращаем вас на спавн…</gray>'
   actionbar: '<#FF6B6B>Бездна</#FF6B6B> <dark_gray>→</dark_gray> <#7DE3F4>спавн</#7DE3F4>'
-  returned: '<#7DE3F4>Бездна вернула вас на спавн</#7DE3F4>'
+  returned: '<#7DE3F4>✦ Бездна вернула вас на спавн</#7DE3F4>'
 
 protection:
+  # Разрешить игрокам открывать обычные и ловушечные сундуки.
+  # Всё остальное в защищённой зоне блокируется: двери, кнопки, рычаги,
+  # таблички, вазы, вёдра, верстаки, печи и т.д.
+  allow-chests: true
   # Держать в защищённых мирах ясную погоду.
   disable-weather: true
   # Не давать голодать на спавне.
@@ -78,13 +82,12 @@ death:
   subtitle: '<gray>Ты снова в игре</gray>'
 
 messages:
-  only-players: '<#FF6B6B>Только для игроков.</#FF6B6B>'
-  no-permission: '<#FF6B6B>Недостаточно прав.</#FF6B6B>'
-  spawn-not-found: '<#FF6B6B>Спавн не найден. Загрузите мир и выполните /spawn set.</#FF6B6B>'
-  already-at-spawn: '<gray>Вы уже на спавне.</gray>'
-  spawn-set: '<#7DE3F4>Точка спавна обновлена.</#7DE3F4>'
-  reloaded: '<#7DE3F4>Настройки SpawnShield перезагружены.</#7DE3F4>'
-  edit-on: '<#FFD166>Режим редактирования ВКЛ — защита спавна снята.</#FFD166>'
-  edit-off: '<#7DE3F4>Режим редактирования ВЫКЛ — защита спавна включена.</#7DE3F4>'
-  edit-usage: '<#FF6B6B>Использование: /spawn edit true|false</#FF6B6B>'
-  teleport-failed: '<#FF6B6B>Не удалось телепортировать вас на спавн.</#FF6B6B>'
+  only-players: '<#FF6B6B>× Только для игроков.</#FF6B6B>'
+  no-permission: '<#FF6B6B>× Недостаточно прав.</#FF6B6B>'
+  spawn-not-found: '<#FF6B6B>× Спавн не найден.</#FF6B6B> <gray>Загрузите мир и выполните</gray> <white>/spawn set</white><gray>.</gray>'
+  spawn-set: '<#7DE3F4>✦ Точка спавна обновлена.</#7DE3F4> <gray>Теперь сюда ведёт</gray> <white>/spawn</white><gray>.</gray>'
+  reloaded: '<#7DE3F4>✦ Настройки SpawnShield перезагружены.</#7DE3F4>'
+  edit-on: '<#FFD166>⚠ Режим редактирования включён.</#FFD166> <gray>Защита спавна временно снята.</gray>'
+  edit-off: '<#7DE3F4>✦ Режим редактирования выключен.</#7DE3F4> <gray>Защита снова активна.</gray>'
+  edit-usage: '<#FF6B6B>Использование:</#FF6B6B> <white>/spawn edit true|false</white>'
+  teleport-failed: '<#FF6B6B>× Не удалось телепортировать вас на спавн.</#FF6B6B>'

@@ -50,6 +50,7 @@ public final class SpawnShieldPlugin extends JavaPlugin {
     private volatile boolean voidEnabled;
     private volatile int voidOffset;
     private volatile int voidWarmup;
+    private volatile boolean allowChests;
     private volatile boolean disableWeather;
     private volatile boolean blockHunger;
     private volatile boolean blockMobSpawns;
@@ -124,6 +125,7 @@ public final class SpawnShieldPlugin extends JavaPlugin {
         this.voidEnabled = getConfig().getBoolean("void.enabled", true);
         this.voidOffset = clamp(getConfig().getInt("void.offset", 8), 1, 256);
         this.voidWarmup = clamp(getConfig().getInt("void.warmup-seconds", 0), 0, 10);
+        this.allowChests = getConfig().getBoolean("protection.allow-chests", true);
         this.disableWeather = getConfig().getBoolean("protection.disable-weather", true);
         this.blockHunger = getConfig().getBoolean("protection.block-hunger", true);
         this.blockMobSpawns = getConfig().getBoolean("protection.block-mob-spawns", true);
@@ -290,14 +292,6 @@ public final class SpawnShieldPlugin extends JavaPlugin {
         return spawn != null && spawn.getWorld() != null;
     }
 
-    public boolean nearSpawn(Location location, double distance) {
-        if (!hasSpawn() || location == null || location.getWorld() == null
-                || !location.getWorld().equals(spawn.getWorld())) {
-            return false;
-        }
-        return location.distanceSquared(spawn) <= distance * distance;
-    }
-
     public boolean inSpawn(Location location) {
         if (location == null || location.getWorld() == null) {
             return false;
@@ -365,6 +359,10 @@ public final class SpawnShieldPlugin extends JavaPlugin {
         return voidOffset;
     }
 
+    public boolean allowChests() {
+        return allowChests;
+    }
+
     public boolean blockHunger() {
         return blockHunger;
     }
@@ -410,11 +408,6 @@ public final class SpawnShieldPlugin extends JavaPlugin {
             send(player, text("messages.spawn-not-found", "<#FF6B6B>Спавн не найден.</#FF6B6B>"));
             return false;
         }
-        if (!fromVoid && nearSpawn(player.getLocation(), 2.0D)) {
-            send(player, text("messages.already-at-spawn", "<gray>Вы уже на спавне.</gray>"));
-            return false;
-        }
-
         cancelTeleport(player, null);
 
         int seconds = fromVoid ? voidWarmup : warmup;
@@ -448,15 +441,14 @@ public final class SpawnShieldPlugin extends JavaPlugin {
             title(player,
                     text("teleport.title", "<gradient:#7DE3F4:#B388FF>НЕ ДВИГАЙТЕСЬ</gradient>"),
                     text("teleport.subtitle",
-                            "<gray>Идёт телепортация</gray> <dark_gray>·</dark_gray> <white>%time%</white><gray>с</gray>")
-                            .replace("%time%", String.valueOf(seconds)),
+                            "<gray>Идёт телепортация</gray> <dark_gray>•</dark_gray> <#B388FF>приготовьтесь</#B388FF>"),
                     Title.Times.times(
                             Duration.ofMillis(150L),
                             Duration.ofMillis(Math.max(700, seconds * 1000L)),
                             Duration.ofMillis(250L)
                     ));
             actionBar(player, text("teleport.countdown",
-                    "<#7DE3F4>⏳ Телепорт через <white>%time%</white><#7DE3F4>с</#7DE3F4> <dark_gray>·</dark_gray> <gray>не двигайтесь</gray>")
+                    "<#7DE3F4>Телепорт</#7DE3F4> <dark_gray>•</dark_gray> <gray>через</gray> <white>%time%</white><gray>с</gray>")
                     .replace("%time%", String.valueOf(seconds)));
         }
 
@@ -491,7 +483,7 @@ public final class SpawnShieldPlugin extends JavaPlugin {
             if (current.getWorld() != session.origin.getWorld()
                     || current.distanceSquared(session.origin) > cancelDistance * cancelDistance) {
                 cancelTeleport(player, text("teleport.moved",
-                        "<#FF6B6B>Телепорт отменён</#FF6B6B> <gray>— вы сдвинулись</gray>"));
+                        "<#FF6B6B>× Телепорт отменён</#FF6B6B> <dark_gray>•</dark_gray> <gray>вы сдвинулись с места</gray>"));
                 return;
             }
         }
@@ -505,7 +497,7 @@ public final class SpawnShieldPlugin extends JavaPlugin {
         int seconds = (int) Math.ceil(remaining / 1000.0D);
         if (countdownActionBar) {
             actionBar(player, text("teleport.countdown",
-                    "<#7DE3F4>⏳ Телепорт через <white>%time%</white><#7DE3F4>с</#7DE3F4> <dark_gray>·</dark_gray> <gray>не двигайтесь</gray>")
+                    "<#7DE3F4>Телепорт</#7DE3F4> <dark_gray>•</dark_gray> <gray>через</gray> <white>%time%</white><gray>с</gray>")
                     .replace("%time%", String.valueOf(seconds)));
         }
         if (effects && seconds != session.lastSecond) {
@@ -581,7 +573,7 @@ public final class SpawnShieldPlugin extends JavaPlugin {
         }
         if (!success) {
             send(player, text("messages.teleport-failed",
-                    "<#FF6B6B>Не удалось телепортировать вас на спавн.</#FF6B6B>"));
+                    "<#FF6B6B>× Не удалось телепортировать вас на спавн.</#FF6B6B>"));
             return;
         }
 
@@ -612,7 +604,7 @@ public final class SpawnShieldPlugin extends JavaPlugin {
                             Duration.ofMillis(400L)
                     ));
             actionBar(player, text("teleport.success-actionbar",
-                    "<#7DE3F4>Вы на спавне</#7DE3F4> <dark_gray>·</dark_gray> <gray>мир под защитой</gray>"));
+                    "<#7DE3F4>Вы на спавне</#7DE3F4>"));
         }
     }
 

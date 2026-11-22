@@ -3,26 +3,28 @@ package ru.spawnshield;
 import io.papermc.paper.event.block.PlayerShearBlockEvent;
 import io.papermc.paper.event.player.PlayerFlowerPotManipulateEvent;
 import io.papermc.paper.event.player.PlayerInsertLecternBookEvent;
+import io.papermc.paper.event.player.PlayerLecternPageChangeEvent;
+import io.papermc.paper.event.player.PlayerOpenSignEvent;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
-import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.ItemFrame;
-import org.bukkit.entity.LeashHitch;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockBurnEvent;
+import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.block.BlockDispenseArmorEvent;
 import org.bukkit.event.block.BlockDispenseEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
@@ -38,6 +40,9 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.BlockSpreadEvent;
 import org.bukkit.event.block.EntityBlockFormEvent;
 import org.bukkit.event.block.LeavesDecayEvent;
+import org.bukkit.event.block.SignChangeEvent;
+import org.bukkit.event.block.SpongeAbsorbEvent;
+import org.bukkit.event.block.TNTPrimeEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityCombustEvent;
@@ -46,13 +51,21 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityInteractEvent;
 import org.bukkit.event.entity.EntityPlaceEvent;
+import org.bukkit.event.entity.ExplosionPrimeEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
+import org.bukkit.event.entity.PlayerLeashEntityEvent;
+import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.hanging.HangingBreakEvent;
 import org.bukkit.event.hanging.HangingPlaceEvent;
 import org.bukkit.event.player.PlayerArmorStandManipulateEvent;
+import org.bukkit.event.player.PlayerBedEnterEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
+import org.bukkit.event.player.PlayerBucketEntityEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.event.player.PlayerEditBookEvent;
+import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerHarvestBlockEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -60,7 +73,9 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
+import org.bukkit.event.player.PlayerShearEntityEvent;
 import org.bukkit.event.player.PlayerTakeLecternBookEvent;
+import org.bukkit.event.player.PlayerUnleashEntityEvent;
 import org.bukkit.event.weather.WeatherChangeEvent;
 import org.bukkit.event.world.PortalCreateEvent;
 import org.bukkit.event.world.StructureGrowEvent;
@@ -107,14 +122,36 @@ public final class SpawnListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
+    public void onBlockDamage(BlockDamageEvent event) {
+        if (plugin.inSpawn(event.getBlock().getLocation()) && !canModify(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onInteract(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
         Block block = event.getClickedBlock();
-        if (block == null || !plugin.inSpawn(block.getLocation()) || canModify(event.getPlayer())) {
+        boolean inSpawn = plugin.inSpawn(player.getLocation())
+                || (block != null && plugin.inSpawn(block.getLocation()));
+        if (!inSpawn || canModify(player)) {
+            return;
+        }
+        if (block != null
+                && event.getAction() == Action.RIGHT_CLICK_BLOCK
+                && plugin.allowChests()
+                && plugin.inSpawn(block.getLocation())
+                && isAllowedChest(block)) {
             return;
         }
         event.setCancelled(true);
         event.setUseInteractedBlock(Event.Result.DENY);
         event.setUseItemInHand(Event.Result.DENY);
+    }
+
+    private static boolean isAllowedChest(Block block) {
+        Material type = block.getType();
+        return type == Material.CHEST || type == Material.TRAPPED_CHEST;
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
@@ -166,22 +203,39 @@ public final class SpawnListener implements Listener {
         }
     }
 
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onLecternPage(PlayerLecternPageChangeEvent event) {
+        if (plugin.inSpawn(event.getLectern().getLocation()) && !canModify(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onSignOpen(PlayerOpenSignEvent event) {
+        if (plugin.inSpawn(event.getSign().getLocation()) && !canModify(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onSignChange(SignChangeEvent event) {
+        if (plugin.inSpawn(event.getBlock().getLocation()) && !canModify(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
     // --------------------------------------------------------------- entities
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onInteractEntity(PlayerInteractEntityEvent event) {
-        if (isProtectedEntity(event.getRightClicked())
-                && plugin.inSpawn(event.getRightClicked().getLocation())
-                && !canModify(event.getPlayer())) {
+        if (plugin.inSpawn(event.getRightClicked().getLocation()) && !canModify(event.getPlayer())) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onInteractAtEntity(PlayerInteractAtEntityEvent event) {
-        if (isProtectedEntity(event.getRightClicked())
-                && plugin.inSpawn(event.getRightClicked().getLocation())
-                && !canModify(event.getPlayer())) {
+        if (plugin.inSpawn(event.getRightClicked().getLocation()) && !canModify(event.getPlayer())) {
             event.setCancelled(true);
         }
     }
@@ -193,8 +247,69 @@ public final class SpawnListener implements Listener {
         }
     }
 
-    private static boolean isProtectedEntity(Entity entity) {
-        return entity instanceof ItemFrame || entity instanceof ArmorStand || entity instanceof LeashHitch;
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onBedEnter(PlayerBedEnterEvent event) {
+        if (plugin.inSpawn(event.getBed().getLocation()) && !canModify(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onBucketEntity(PlayerBucketEntityEvent event) {
+        if (plugin.inSpawn(event.getPlayer().getLocation()) && !canModify(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onFish(PlayerFishEvent event) {
+        if (plugin.inSpawn(event.getPlayer().getLocation()) && !canModify(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onShearEntity(PlayerShearEntityEvent event) {
+        if (plugin.inSpawn(event.getEntity().getLocation()) && !canModify(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onLeash(PlayerLeashEntityEvent event) {
+        if (plugin.inSpawn(event.getEntity().getLocation()) && !canModify(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onUnleash(PlayerUnleashEntityEvent event) {
+        if (plugin.inSpawn(event.getEntity().getLocation()) && !canModify(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onEditBook(PlayerEditBookEvent event) {
+        if (plugin.inSpawn(event.getPlayer().getLocation()) && !canModify(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onDropItem(PlayerDropItemEvent event) {
+        if (plugin.inSpawn(event.getPlayer().getLocation()) && !canModify(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onProjectileLaunch(ProjectileLaunchEvent event) {
+        if (event.getEntity().getShooter() instanceof Player player
+                && plugin.inSpawn(player.getLocation())
+                && !canModify(player)) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
@@ -310,6 +425,23 @@ public final class SpawnListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onSpongeAbsorb(SpongeAbsorbEvent event) {
+        for (BlockState state : event.getBlocks()) {
+            if (protectedAt(state.getLocation())) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onTntPrime(TNTPrimeEvent event) {
+        if (protectedAt(event.getBlock().getLocation())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onDispense(BlockDispenseEvent event) {
         if (protectedAt(event.getBlock().getLocation())) {
             event.setCancelled(true);
@@ -393,6 +525,13 @@ public final class SpawnListener implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onExplosionPrime(ExplosionPrimeEvent event) {
+        if (protectedAt(event.getEntity().getLocation())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onBlockExplode(BlockExplodeEvent event) {
         if (protectedAt(event.getBlock().getLocation())) {
             event.setCancelled(true);
@@ -451,7 +590,7 @@ public final class SpawnListener implements Listener {
 
         if (entity instanceof Player player && plugin.isTeleporting(player.getUniqueId())) {
             plugin.cancelTeleport(player, plugin.text("teleport.damaged",
-                    "<#FF6B6B>Телепорт отменён</#FF6B6B> <gray>— вы получили урон</gray>"));
+                    "<#FF6B6B>× Телепорт отменён</#FF6B6B> <dark_gray>•</dark_gray> <gray>вы получили урон</gray>"));
         }
 
         if (!plugin.blockEntityDamage() && !(entity instanceof Player)) {
