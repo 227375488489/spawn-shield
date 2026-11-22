@@ -1,4 +1,4 @@
-# SpawnShield 2.0.0 — самостоятельная защита мира спавна и телепорт /spawn.
+# SpawnShield 2.0.2 — самостоятельная защита мира спавна и телепорт /spawn.
 # Плагин не зависит от AuraCore/Aura*: свой namespace, свои permissions, только Paper API.
 
 # Префикс обычных сообщений в чате.
@@ -60,7 +60,7 @@ protection:
   disable-weather: true
   # Не давать голодать на спавне.
   block-hunger: true
-  # Не давать спавниться мобам (кроме CUSTOM/COMMAND/PLUGIN — NPC и плагины).
+  # Не давать спавниться мобам (кроме CUSTOM/COMMAND — NPC и плагины).
   block-mob-spawns: true
   # Отменять любой урон всем сущностям в зоне спавна.
   block-entity-damage: true

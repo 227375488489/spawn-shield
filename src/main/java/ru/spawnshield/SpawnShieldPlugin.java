@@ -5,13 +5,12 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.title.Title;
@@ -36,27 +35,27 @@ public final class SpawnShieldPlugin extends JavaPlugin {
     static final String BYPASS = "spawnshield.bypass";
     static final MiniMessage MM = MiniMessage.miniMessage();
 
-    private final Set<World> protectedWorlds = new HashSet<>();
-    private final Map<UUID, TeleportSession> sessions = new HashMap<>();
+    private volatile Set<World> protectedWorlds = Set.of();
+    private final Map<UUID, TeleportSession> sessions = new ConcurrentHashMap<>();
 
     private File spawnFile;
-    private Location spawn;
-    private double radius;
-    private int warmup;
-    private double cancelDistance;
-    private boolean blindness;
-    private boolean effects;
-    private boolean countdownActionBar;
-    private boolean deathTitles;
-    private boolean voidEnabled;
-    private int voidOffset;
-    private int voidWarmup;
-    private boolean disableWeather;
-    private boolean blockHunger;
-    private boolean blockMobSpawns;
-    private boolean blockEntityDamage;
-    private boolean editMode;
-    private String prefix;
+    private volatile Location spawn;
+    private volatile double radius;
+    private volatile int warmup;
+    private volatile double cancelDistance;
+    private volatile boolean blindness;
+    private volatile boolean effects;
+    private volatile boolean countdownActionBar;
+    private volatile boolean deathTitles;
+    private volatile boolean voidEnabled;
+    private volatile int voidOffset;
+    private volatile int voidWarmup;
+    private volatile boolean disableWeather;
+    private volatile boolean blockHunger;
+    private volatile boolean blockMobSpawns;
+    private volatile boolean blockEntityDamage;
+    private volatile boolean editMode;
+    private volatile String prefix;
 
     @Override
     public void onEnable() {
@@ -64,7 +63,6 @@ public final class SpawnShieldPlugin extends JavaPlugin {
         saveDefaultConfig();
         disableLegacyAuraSpawn();
         reloadAll();
-        loadSpawn();
 
         getServer().getPluginManager().registerEvents(new SpawnListener(this), this);
         PluginCommand command = getCommand("spawn");
@@ -134,6 +132,8 @@ public final class SpawnShieldPlugin extends JavaPlugin {
         this.editMode = false;
 
         resolveProtectedWorlds();
+        loadSpawn();
+        applyWorldSettings();
     }
 
     private static int clamp(int value, int min, int max) {
@@ -141,23 +141,25 @@ public final class SpawnShieldPlugin extends JavaPlugin {
     }
 
     private void resolveProtectedWorlds() {
-        protectedWorlds.clear();
+        Set<World> resolved = ConcurrentHashMap.newKeySet();
         List<String> configured = getConfig().getStringList("protected-worlds");
         if (!configured.isEmpty()) {
             for (String name : configured) {
                 World world = findWorld(name);
                 if (world != null) {
-                    protectedWorlds.add(world);
+                    resolved.add(world);
                 } else {
                     getLogger().warning("Unknown protected world: " + name);
                 }
             }
+            this.protectedWorlds = Set.copyOf(resolved);
             return;
         }
         World fallback = findSpawnWorld();
         if (fallback != null) {
-            protectedWorlds.add(fallback);
+            resolved.add(fallback);
         }
+        this.protectedWorlds = Set.copyOf(resolved);
     }
 
     static World findWorld(String name) {
