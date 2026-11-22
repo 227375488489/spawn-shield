@@ -1,0 +1,90 @@
+# SpawnShield 2.0.0 — самостоятельная защита мира спавна и телепорт /spawn.
+# Плагин не зависит от AuraCore/Aura*: свой namespace, свои permissions, только Paper API.
+
+# Префикс обычных сообщений в чате.
+prefix: '<gradient:#7DE3F4:#B388FF>SpawnShield</gradient> <dark_gray>»</dark_gray> '
+
+# Миры, которые защищены целиком. Для текущего сервера это void-мир 'spawn'
+# (раньше здесь ошибочно стояло 'worlds:spawn', из-за чего защита не работала).
+protected-worlds:
+  - 'spawn'
+
+# Дополнительный радиус защиты вокруг /spawn set (0 = выключено).
+# Нужен, если в списке protected-worlds указан не весь мир.
+spawn-radius: 96
+
+teleport:
+  # Отсчёт в секундах. 0 = мгновенный телепорт.
+  warmup-seconds: 3
+  # На сколько блоков можно сдвинуться до отмены телепорта.
+  cancel-distance: 0.35
+  # Затемнение экрана (Blindness) до и во время переноса, снимается после прибытия.
+  blindness: true
+  # Звуки и частицы.
+  effects: true
+  # Показывать отчёт об отсчёте в action bar.
+  countdown-actionbar: true
+
+  # Заголовок во время отсчёта.
+  title: '<gradient:#7DE3F4:#B388FF>НЕ ДВИГАЙТЕСЬ</gradient>'
+  subtitle: '<gray>Идёт телепортация</gray> <dark_gray>·</dark_gray> <white>%time%</white><gray>с</gray>'
+  countdown: '<#7DE3F4>⏳ Телепорт через <white>%time%</white><#7DE3F4>с</#7DE3F4> <dark_gray>·</dark_gray> <gray>не двигайтесь</gray>'
+
+  # Короткая вспышка в момент переноса.
+  moving-title: '<dark_gray>✦</dark_gray>'
+  moving-subtitle: '<gray>Перемещение…</gray>'
+
+  # Прибытие на спавн.
+  success-title: '<gradient:#7DE3F4:#B388FF>✦ СПАВН ✦</gradient>'
+  success-subtitle: '<gray>Добро пожаловать домой</gray>'
+  success-actionbar: '<#7DE3F4>Вы на спавне</#7DE3F4> <dark_gray>·</dark_gray> <gray>мир под защитой</gray>'
+
+  # Отмена.
+  moved: '<#FF6B6B>Телепорт отменён</#FF6B6B> <gray>— вы сдвинулись</gray>'
+  damaged: '<#FF6B6B>Телепорт отменён</#FF6B6B> <gray>— вы получили урон</gray>'
+
+# Падение в бездну (ниже минимальной высоты мира) возвращает на спавн.
+void:
+  enabled: true
+  # Насколько ниже minHeight мира начинать спасение.
+  offset: 8
+  # 0 = мгновенно. Можно поставить 1, если нужна задержка.
+  warmup-seconds: 0
+  title: '<gradient:#FF6B6B:#FFB86B>БЕЗДНА</gradient>'
+  subtitle: '<gray>Возвращаем на спавн…</gray>'
+  actionbar: '<#FF6B6B>Бездна</#FF6B6B> <dark_gray>→</dark_gray> <#7DE3F4>спавн</#7DE3F4>'
+  returned: '<#7DE3F4>Бездна вернула вас на спавн</#7DE3F4>'
+
+protection:
+  # Держать в защищённых мирах ясную погоду.
+  disable-weather: true
+  # Не давать голодать на спавне.
+  block-hunger: true
+  # Не давать спавниться мобам (кроме CUSTOM/COMMAND/PLUGIN — NPC и плагины).
+  block-mob-spawns: true
+  # Отменять любой урон всем сущностям в зоне спавна.
+  block-entity-damage: true
+
+# Заголовок после смерти (не влияет на защиту).
+death:
+  enabled: true
+  phrases:
+    - '<gradient:#FF6B6B:#FFB86B>Снова ты?</gradient>'
+    - '<gradient:#7DE3F4:#B388FF>Ты воскрес...</gradient>'
+    - '<gradient:#A8E6CF:#7DE3F4>С возвращением.</gradient>'
+    - '<gradient:#FFD166:#FF6B6B>Смерть — не конец.</gradient>'
+    - '<gradient:#C5C6CA:#7DE3F4>Опять?</gradient>'
+    - '<gradient:#B388FF:#7DE3F4>Новая попытка.</gradient>'
+  subtitle: '<gray>Ты снова в игре</gray>'
+
+messages:
+  only-players: '<#FF6B6B>Только для игроков.</#FF6B6B>'
+  no-permission: '<#FF6B6B>Недостаточно прав.</#FF6B6B>'
+  spawn-not-found: '<#FF6B6B>Спавн не найден. Загрузите мир и выполните /spawn set.</#FF6B6B>'
+  already-at-spawn: '<gray>Вы уже на спавне.</gray>'
+  spawn-set: '<#7DE3F4>Точка спавна обновлена.</#7DE3F4>'
+  reloaded: '<#7DE3F4>Настройки SpawnShield перезагружены.</#7DE3F4>'
+  edit-on: '<#FFD166>Режим редактирования ВКЛ — защита спавна снята.</#FFD166>'
+  edit-off: '<#7DE3F4>Режим редактирования ВЫКЛ — защита спавна включена.</#7DE3F4>'
+  edit-usage: '<#FF6B6B>Использование: /spawn edit true|false</#FF6B6B>'
+  teleport-failed: '<#FF6B6B>Не удалось телепортировать вас на спавн.</#FF6B6B>'

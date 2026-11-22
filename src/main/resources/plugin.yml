@@ -1,0 +1,23 @@
+name: SpawnShield
+version: '${version}'
+main: ru.spawnshield.SpawnShieldPlugin
+api-version: '26.3'
+authors: [Atlantica]
+description: Standalone spawn world protection and cinematic /spawn teleport
+website: https://github.com/227375488489/spawn-shield
+commands:
+  spawn:
+    description: Teleport to spawn
+    usage: /spawn [set|reload|edit]
+    aliases: [sp]
+    permission: spawnshield.use
+permissions:
+  spawnshield.use:
+    description: Allows /spawn
+    default: true
+  spawnshield.bypass:
+    description: Bypasses spawn protection in edit mode
+    default: op
+  spawnshield.admin:
+    description: Allows /spawn set, reload and edit
+    default: op
