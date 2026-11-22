@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1
+
+- Исполняемый бит `gradlew` для GitHub Actions.
+- Версия в `plugin.yml` обновляется корректно, сборка выпуска проходит в CI.
+
 ## 2.0.0
 
 - Полностью самостоятельный плагин `SpawnShield`, без AuraCore и namespace `aura.*`.
